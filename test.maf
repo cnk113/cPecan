@@ -1,0 +1,46 @@
+##maf version=1 scoring=N/A
+# hal (((ADORSATA:0.01201,(((BCONFUSES:0.023453,((((((BSKORIKOVI:0.006672,BTURNERI:0.005886)Anc20:0.007028,BOPULENTUS:0.014943)Anc15:0.001708,BHAEMORRHOIDALIS:0.013762)Anc11:0.000452,(BCONSOBRINUS:0.012523,BDIFFICILLIMUS:0.011833)Anc12:0.000891)Anc09:0.001563,(((BPOLARIS:0.009649,(BIGNITUS:0.004486,BTERRESTRIS:0.004241)Anc21:0.007155)Anc16:0.002938,(BPICIPES:0.007845,BIMPATIENS:0.008998)Anc17:0.003992)Anc13:0.001192,((BCULLUMANUS:0.012621,BSIBIRICUS:0.006388)Anc18:0.00125,(BBREVICEPS:0.010779,BPYROSOMA:0.009524)Anc19:0.000515)Anc14:0.002106)Anc10:0.001393)Anc08:0.002027,BSOROEENSIS:0.015358)Anc07:0.009583)Anc05:0.003273,(BSUPERBUS:0.004542,BWALTONI:0.007118)Anc06:0.017534)Anc04:0.146975,AFLOREA:0.015906)Anc03:0.005966)Anc02:0.003834,ACERANA:0.01105,AMELLIFERA:0.013083)Anc01:1e-07)Anc00;
+
+a
+s	BTERRESTRIS.NC_015770.1	0	1000	+	15655298	CATAgctagctgcggaaacatacaaaaccatagatatggacagaagactaaaaggaagcacccagcagaccttataaaggacataacctaagaaacacgaggatggtaccccgctgggggtagccaccaacatgctaatttaaccgctaaaaaattccaccaaatatccaaattggacaaattgtgaattttaataaataaaataaaaaaaaaaaaataacttgttcgaagagtagagtctttgtgtagcgaaccacgggacagaagccgctgtcgagtgccgctacaaatataacaagtagaattacctgtagcagcactcgacaggaaacttcccaacggtttctgtctcgtgcctcgctacacaaagactctacccttcgaacgagatgattgccagatgtcgatacattctcaccgaatatttacagcgagcctaaggacccgctataaatcttaggattcgtgcagctaagattctctaaagggacaaatagtctttgtctcaatagtccctacacataccacccactacgggaaatctgctttttctcacgtacgacgctcctcgctagcaactttctctcaaggacagttaccatctctttccaaccaccaactcacgatttagccaattaacagcgacgtccatttccctcactctctgaactaacgcttttcttaacgaatccgatgattccgtatccttagacacacccaaacacagttttcctaaggagcatcctcgcgacacaaattcattctgatctatcgcgagccgcgaagcaagttggaagacgcctatctgaatcgttcgtccgcggtcgtacataataacgaatctgaatctctggacatctgtgcaatcgtctggactcgaaccaccgcgtaaagtaccgcgccgagtttggacttgtaatctcgaaccgataattgtaccgttctttcaccgcgctagtgtataccacggacacaagcaaataaatagatattgttaagc
+
+a
+s	BTERRESTRIS.NC_015770.1	1000	42	+	15655298	aataccgagtgattcttctatacctatcacgcccatcacctc
+
+a
+s	BTERRESTRIS.NC_015770.1	1042	11	+	15655298	aTACCCTTCGC
+s	BIMPATIENS.NT_177056.1	2441	11	+	2345211	tTATCCTTAGC
+s	BPICIPES.scaffold_23_uid_1510577946	2456	11	+	6290926	tTATCCTTAGC
+s	BSIBIRICUS.scaffold_121_uid_1509951884	3048	11	+	6303882	tTATCCTTAGC
+s	BCULLUMANUS.scaffold_57_uid_1510024058	1941	11	-	6143458	tTATCCTTAGC
+s	BDIFFICILLIMUS.scaffold_99_uid_1509957799	1904	11	-	4443918	tTATCCTTAGC
+s	BCONSOBRINUS.scaffold_76_uid_1509784567	4637	11	+	6163893	ttatccttggt
+s	BSKORIKOVI.scaffold_97_uid_1509975753	3286605	11	+	7297596	tTATCCTTAGC
+s	BTURNERI.scaffold_50_uid_1510564557	1943438	11	-	6003737	TTATCCTTAGC
+s	BOPULENTUS.scaffold_81_uid_1509954661	2663	11	-	5407575	tTATCCTTAAC
+s	Anc20.Anc20refChr458	3224181	11	+	6113722	tTATCCTTAGC
+s	BHAEMORRHOIDALIS.scaffold_102_uid_1508205094	6820	11	+	3950397	tTATCCTTAGC
+s	Anc15.Anc15refChr193	368	11	+	1520988	tTATCCTTAGC
+s	Anc12.Anc12refChr158	1048	11	-	963389	tTATCCTTAGC
+s	BSUPERBUS.scaffold_24_uid_1509956188	2122	11	-	5256598	TTACCTTTAGC
+s	Anc03.Anc03refChr1091	340	11	-	1997	TTACCCTTTCC
+s	BWALTONI.scaffold_42_uid_1510550546	1772	11	-	5248861	TTACCTTTAGC
+s	Anc06.Anc06refChr34	1748	11	-	3145365	TTACCTTTAGC
+s	Anc04.Anc04refChr581	1370	11	-	1624	TTACCCTTAGC
+s	BCONFUSES.scaffold_49_uid_1510024884	2428	11	-	1189645	TTACCCTTAGC
+s	Anc05.Anc05refChr45	647	11	+	43089	TTACCCTTAGC
+s	BSOROEENSIS.scaffold_164_uid_1510122577	2273	11	+	1275040	ttatcCTTAGC
+s	Anc07.Anc07refChr115	729	11	+	2078663	ttatcCTTAGC
+s	Anc09.Anc09refChr645	73	11	-	1675049	tTATCCTTAGC
+s	Anc08.Anc08refChr115	1071	11	-	3959370	tTATCCTTAGC
+s	Anc10.Anc10refChr306	1182	11	-	1659654	tTATCCTTAGC
+s	Anc14.Anc14refChr54	1305	11	+	1655223	tTATCCTTAGC
+s	Anc17.Anc17refChr8	1781	11	+	2314580	tTATCCTTAGC
+s	Anc18.Anc18refChr32	1565	11	+	4955067	tTATCCTTAGC
+s	Anc21.Anc21refChr546	2175	11	-	1140142	ttATCCTTAGC
+s	BIGNITUS.scaffold_145_uid_1509791240	2902	11	-	3889278	tTATCCTTAGC
+s	Anc16.Anc16refChr53	2252	11	+	4900359	ttATCCTTAGC
+s	BPOLARIS.scaffold_17_uid_1510613393	7039	11	-	2299390	ttatcCTTAGC
+s	Anc13.Anc13refChr558	1294	11	-	5548603	tTATCCTTAGC
+s	Anc11.Anc11refChr466	1077	11	+	4966608	tTATCCTTAGC
+

@@ -8,58 +8,37 @@ Trains the pair HMM on the alignment block and surrounding sequence
 
 import argparse
 import os
-from sonLib.bioio import popenCatch
+#from sonLib.bioio import popenCatch, cigarReadFromString
 
-class MafBlock:
+
+def pairwise(ref,blocks,targets):
     '''
-    Contains the MAF block in a dictionary where the species is the key
-    position function is relative to the reference genome position
+    :return:
     '''
-    def __init__(self,range,):
-        '''
-        just instantiates the block
-        :param range:
-        '''
-        self.genomes = {}
-        self.range = range
-
-    def createBlock(self,maf):
-        '''
-        actually instantiates the block, since we don't want to do it for all MAF blocks in the MAF file
-        :param maf:
-        :return:
-        '''
-        lines = maf[self.range[0]:self.range[1]]
-        for line in lines:
-            attr = line.split()
-            genome = attr[1].split('.')
-            self.genomes[genome[0]] = (genome[1],attr[2],attr[3],attr[4],attr[6].rstrip())
-
-    def getReference(self,genomes,size):
-        '''
-        gets the surrounding sequences of the alignment blocks
-        :param genomes:
-        :param size:
-        :return:
-        '''
-        for genomes in genomes:
+    cigars = []
+    for block in blocks:
+        seq1 = block.get(ref)
+        for target in targets:
+            seq2 = block.get(target)
+            cig = cigar(seq1, seq2)
+            with open('seqFile1','w+') as out:
+                out.write(seq1)
+            with open('seqFile2','w+') as out2:
+                out2.write(seq2)
+            realignCommand = "%s | cPecanRealign %s %s %s" % (cig, "--rescoreByPosteriorProb", 'seqFile1', 'seqFile2')
+            for realignLineByPosteriorProb in [i for i in popenCatch(realignCommand).split("\n") if i != '']:
+                line = cigarReadFromString(realignLineByPosteriorProb)
+                print(line)
+    return cigars
 
 
-
-    def get(self):
-        '''
-        :return: the alignment block
-        '''
-        return self.genomes
-
-
-def parseMaf(maf,range):
+def parseMaf(maf,ran):
     '''
     :param maf: maf file
-    :param range: search range
+    :param ran: search range
     :return: list of MafBlocks in sorted order of the reference genome position
     '''
-    r = range.split('-')
+    r = ran.split('-')
     start = int(r[0])
     end = int(r[1])
     with open(maf) as infile:
@@ -67,25 +46,43 @@ def parseMaf(maf,range):
         allBlocks = []
         current = []
         for line in infile:
-            if line[0] == 'a' and not inBlock:
+            line = line.rstrip()
+            if line and line[0] == 'a' and not inBlock:
                 current.append(line)
                 inBlock = True
             elif not line and inBlock:
                 inBlock = False
                 pos = current[1].split()
+                print(int(pos[2]) + int(pos[3]))
+                print(start)
+                print(int(pos[2]))
                 if int(pos[2]) + int(pos[3]) >= start >= int(pos[2]):
                     allBlocks.append(current)
                 elif int(pos[2]) >= start and int(pos[3]) <= end:
                     allBlocks.append(current)
-                elif int(pos[2]) <= end <= int(pos[2]) + int(pos[3]):
+                elif int(pos[2]) <= end <= int(pos[2]) + int(pos[3]) or int(pos[2]) <= start and int(pos[3]) >= end:
                     allBlocks.append(current)
                     break
             elif inBlock:
                 current.append(line)
-    mafBlocks = []
-    for block in allBlocks:
-        mafBlocks.append(MafBlock(block[1:]))
-    return mafBlocks
+    for i in range(len(allBlocks)):
+        temp = []
+        for line in allBlocks[i]:
+            if line[0] != '#' and line[0] != 'a':
+                temp.append(line.split())
+        allBlocks[i] = temp
+    if len(allBlocks) != 1:
+        first = allBlocks[0]
+        last = allBlocks[len(allBlocks)-1]
+        for i in range(len(first)):
+            allBlocks[0][i][6] = first[i][6][start - int(first[i][2]):]
+        for i in range(len(last)):
+            allBlocks[len(allBlocks)-1][i][6] = last[i][6][:int(last[i][3])+int(last[i][2])-end]
+    else:
+        block = allBlocks[0]
+        for i in range(len(block)):
+            allBlocks[0][i][6] = block[i][6][start-int(block[2]):int(block[3])+int(block[2])-end]
+    return allBlocks
 
 
 def cigar(seq1, seq2):
@@ -102,7 +99,7 @@ def cigar(seq1, seq2):
             full += 'M'
         elif seq1[i] != '-' and seq2[i] == '-':
             full += 'I'
-        elif seq1[i] == '-' and '-' == seq2[i]:
+        elif seq1[i] == '-' and '-' != seq2[i]:
             full += 'D'
     count = 1
     cigar = ''
@@ -118,27 +115,28 @@ def cigar(seq1, seq2):
 
 def parseArgs():
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('-pos',help='region of interest, e.g. 400-500')
-    parser.add_argument('-maf',help='maf file')
-    parser.add_argument('-genomes',help='genome directory')
+    parser.add_argument('-p',help='region of interest, e.g. 400-500')
+    parser.add_argument('-m',help='maf file')
+    parser.add_argument('-r',help='reference genome as written in maf file')
+    parser.add_argument('-t',help='target genomes as written in maf file')
+    #parser.add_argument('-genomes',help='genome directory')
     #parser.add_argument('--blockSize',type=int,default=10000,help='size of upstream and downstream for HMM to train')
     return parser.parse_args()
 
 
 def main():
     opts = parseArgs()
-    blocks = parseMaf(opts.maf,opts.pos)
-    genomes = {}
-    for f in os.listdir(opts.genomes):
-        if os.path.isfile(os.path.join(opts.genomes,f)):
-            genomes[f.split('.')[0]] = Fasta(os.path.join(opts.genomes,f))
+    with open(opts.t,'r') as infile:
+        genomes = [line.rstrip() for line in infile]
+    blocks = parseMaf(opts.m, opts.p)
+    dictBlock = []
     for block in blocks:
-        block.getReference(genomes,opts.blockSize)
-
-    cig = cigar(seq1,seq2)
-    realignCommand = "%s | cPecanRealign %s %s %s" % (cig, "--rescoreByPosteriorProb", seqFile1, seqFile2)
-    output = [i for i in popenCatch(realignCommand).split("\n") if i != '']
-    realignCigar = cigarReadFromString(output)
+        map = {}
+        for line in block:
+            map[line[1].split('.')[0]] = line[6]
+        dictBlock.append(map)
+    print(dictBlock)
+    pairwise(opts.r,dictBlock,genomes)
 
 
 

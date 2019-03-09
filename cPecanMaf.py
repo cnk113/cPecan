@@ -21,15 +21,40 @@ def pairwise(ref,blocks,targets):
         for target in targets:
             seq2 = block.get(target)
             cig = cigar(seq1, seq2)
-            with open('seqFile1','w+') as out:
-                out.write(seq1)
-            with open('seqFile2','w+') as out2:
-                out2.write(seq2)
-            realignCommand = "%s | cPecanRealign %s %s %s" % (cig, "--rescoreByPosteriorProb", 'seqFile1', 'seqFile2')
+            realignCommand = "%s | cPecanRealign %s %s %s" % (cig, "--outputPosteriorProbs", 'seqFile1', 'seqFile2')
             for realignLineByPosteriorProb in [i for i in popenCatch(realignCommand).split("\n") if i != '']:
                 line = cigarReadFromString(realignLineByPosteriorProb)
                 print(line)
     return cigars
+
+
+def cigar(seq1, seq2, ran):
+    '''
+    :param seq1: target
+    :param seq2: query
+    :return: cigar
+    '''
+    seq1 = seq1.upper()
+    seq2 = seq2.upper()
+    full = ''
+    for i in range(len(seq1)):
+        if seq1[i] != '-' and '-' != seq2[i]:
+            full += 'M'
+        elif seq1[i] != '-' and seq2[i] == '-':
+            full += 'D'
+        elif seq1[i] == '-' and '-' != seq2[i]:
+            full += 'I'
+    count = 1
+    r = ran.split('-')
+    cigar = 'cigar: query' + r[0] + ' ' + r[1]
+    for i in range(1,len(seq1)):
+        if full[i-1] == full[i]:
+            count += 1
+        else:
+            cigar += full[i-1] + ' ' + str(count) + ' '
+            count = 1
+    cigar += full[len(seq1)] + ' ' + str(count)
+    return cigar
 
 
 def parseMaf(maf,ran):
@@ -53,16 +78,16 @@ def parseMaf(maf,ran):
             elif not line and inBlock:
                 inBlock = False
                 pos = current[1].split()
-                print(int(pos[2]) + int(pos[3]))
-                print(start)
-                print(int(pos[2]))
-                if int(pos[2]) + int(pos[3]) >= start >= int(pos[2]):
+                a = int(pos[2])
+                b = a + int(pos[3])
+                if a <= start < b < end:
                     allBlocks.append(current)
-                elif int(pos[2]) >= start and int(pos[3]) <= end:
+                elif start <= a < b < end:
                     allBlocks.append(current)
-                elif int(pos[2]) <= end <= int(pos[2]) + int(pos[3]) or int(pos[2]) <= start and int(pos[3]) >= end:
+                elif start <= a < end <= b or a <= start < end <= b:
                     allBlocks.append(current)
                     break
+                current = []
             elif inBlock:
                 current.append(line)
     for i in range(len(allBlocks)):
@@ -71,46 +96,26 @@ def parseMaf(maf,ran):
             if line[0] != '#' and line[0] != 'a':
                 temp.append(line.split())
         allBlocks[i] = temp
+    startOffset = start - int(allBlocks[0][0][2])
+    endOffset = end - (int(allBlocks[len(allBlocks) - 1][0][3]) + int(allBlocks[len(allBlocks) - 1][0][2]))
     if len(allBlocks) != 1:
         first = allBlocks[0]
         last = allBlocks[len(allBlocks)-1]
         for i in range(len(first)):
-            allBlocks[0][i][6] = first[i][6][start - int(first[i][2]):]
+            allBlocks[0][i][6] = first[i][6][startOffset:]
         for i in range(len(last)):
-            allBlocks[len(allBlocks)-1][i][6] = last[i][6][:int(last[i][3])+int(last[i][2])-end]
+            if endOffset == 0:
+                allBlocks[len(allBlocks) - 1][i][6] = last[i][6]
+            else:
+                allBlocks[len(allBlocks)-1][i][6] = last[i][6][:endOffset]
     else:
         block = allBlocks[0]
         for i in range(len(block)):
-            allBlocks[0][i][6] = block[i][6][start-int(block[2]):int(block[3])+int(block[2])-end]
+            if endOffset == 0:
+                allBlocks[0][i][6] = block[i][6][startOffset:]
+            else:
+                allBlocks[0][i][6] = block[i][6][startOffset:endOffset]
     return allBlocks
-
-
-def cigar(seq1, seq2):
-    '''
-    :param seq1: target
-    :param seq2: query
-    :return: cigar
-    '''
-    seq1 = seq1.upper()
-    seq2 = seq2.upper()
-    full = ''
-    for i in range(len(seq1)):
-        if seq1[i] != '-' and '-' != seq2[i]:
-            full += 'M'
-        elif seq1[i] != '-' and seq2[i] == '-':
-            full += 'I'
-        elif seq1[i] == '-' and '-' != seq2[i]:
-            full += 'D'
-    count = 1
-    cigar = ''
-    for i in range(1,len(seq1)):
-        if full[i-1] == full[i]:
-            count += 1
-        else:
-            cigar += str(count) + full[i-1]
-            count = 1
-    cigar += str(count) + full[len(seq1)]
-    return cigar
 
 
 def parseArgs():
@@ -119,8 +124,6 @@ def parseArgs():
     parser.add_argument('-m',help='maf file')
     parser.add_argument('-r',help='reference genome as written in maf file')
     parser.add_argument('-t',help='target genomes as written in maf file')
-    #parser.add_argument('-genomes',help='genome directory')
-    #parser.add_argument('--blockSize',type=int,default=10000,help='size of upstream and downstream for HMM to train')
     return parser.parse_args()
 
 
@@ -135,7 +138,7 @@ def main():
         for line in block:
             map[line[1].split('.')[0]] = line[6]
         dictBlock.append(map)
-    print(dictBlock)
+    #print(dictBlock)
     pairwise(opts.r,dictBlock,genomes)
 
 

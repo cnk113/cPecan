@@ -8,7 +8,7 @@ Trains the pair HMM on the alignment block and surrounding sequence
 
 import argparse
 import os
-#from sonLib.bioio import popenCatch, cigarReadFromString
+from sonLib.bioio import popenCatch, cigarReadFromString
 
 
 def pairwise(ref,blocks,targets,ran):
@@ -31,7 +31,7 @@ def pairwise(ref,blocks,targets,ran):
     return cigars
 
 
-def cigar(seq1, seq2, ran):
+def cigar(seq1, seq2):
     '''
     :param seq1: ref
     :param seq2: query
@@ -98,6 +98,7 @@ def parseMaf(maf,ran):
             if line[0] != '#' and line[0] != 'a':
                 temp.append(line.split())
         allBlocks[i] = temp
+
     startOffset = start - int(allBlocks[0][0][2])
     endOffset = end - (int(allBlocks[len(allBlocks) - 1][0][3]) + int(allBlocks[len(allBlocks) - 1][0][2]))
     if len(allBlocks) != 1:

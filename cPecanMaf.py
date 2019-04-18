@@ -8,7 +8,7 @@ Trains the pair HMM on the alignment block and surrounding sequence
 
 import argparse
 import os
-from sonLib.bioio import popenCatch, cigarReadFromString
+from sonLib.bioio import popenCatch, cigarReadFromString, system
 
 
 def pairwise(ref,blocks,targets,ran):
@@ -22,22 +22,25 @@ def pairwise(ref,blocks,targets,ran):
         for species in block:
             if species != ref:
                 seq2 = block.get(species)
+                if seq2[2] == '-':
+                    continue
+
+
                 seqFile2 = targets.get(species)
-                cig = cigar(seq1,seq2,ran)
-                realignCommand = "%s | cPecanRealign %s %s %s" % (cig, "--outputPosteriorProbs", seqFile1, seqFile2)
-                for realignLineByPosteriorProb in [i for i in popenCatch(realignCommand).split("\n") if i != '']:
-                    line = cigarReadFromString(realignLineByPosteriorProb)
-                    print(line)
+                cig = cigar(seq1,seq2)
+                #realignCommand = "echo '%s' | /mnt/c/Users/Chang/Desktop/allcode/sonLib/bin/cPecanRealign %s %s %s" % (cig, "-u /dev/stdout", seqFile1, seqFile2)
+
+                print popenCatch(realignCommand).split("\n")
+                #for realignLineByPosteriorProb in [i for i in popenCatch(realignCommand).split("\n") if i != '']:
+                    #line = cigarReadFromString(realignLineByPosteriorProb)
+                    #print(line)
     return cigars
 
-
+'''
 def cigar(seq1, seq2):
-    '''
-    :param seq1: ref
-    :param seq2: query
-    :return: cigar
-    '''
-    cigar = 'cigar: query ' + seq2[2] + ' ' + str(seq2[0]) + ' ' + str(seq2[0] + seq2[1] + 1) + ' '
+    print seq1
+    print seq2
+    cigar = 'cigar: ' + seq1[4] +' '+ str(seq1[0]) + ' ' + str(seq1[1]) + ' ' + seq1[2] + ' ' +seq2[4]+ ' ' + str(seq2[0]) + ' ' + str(seq2[1]) + ' ' + seq2[2] + ' 0 '
     seq1 = seq1[3].upper()
     seq2 = seq2[3].upper()
     full = ''
@@ -57,79 +60,66 @@ def cigar(seq1, seq2):
             count = 1
     cigar += full[len(seq1)-1] + ' ' + str(count)
     return cigar
+'''
+def psl2cigar(files):
+    '''
+    '''
+    cigars = {}
+    for psl in files:
+        with open(psl) as infile:
+            for line in psl:
+                attr = line.rstrip().split()
+                
+    return cigars
 
 
-def parseMaf(maf,ran):
+def axtChain(axt, fasta, ref):
+    '''
+    :param axt:
+    :param fasta:
+    :param ref:
+    '''
+    for aln in axt:
+        cmd = 'axtChain -linearGap=medium ' + axt.get(aln) + ' -faQ ' + fasta.get(ref) + ' -faT ' + fasta.get(aln) + aln + '.chain'
+        print cmd
+        system(cmd)
+    for aln in axt:
+        cmd = 'chain2psl ' + aln + '.chain'
+        
+
+def maf2axt(maf, genomes):
     '''
     :param maf: maf file
-    :param ran: search range
-    :return: list of MafBlocks in sorted order of the reference genome position
+    :param genomes: genomes to align
     '''
-    r = ran.split('-')
-    start = int(r[0])
-    end = int(r[1])
+    files = {}
+    for genome in genomes:
+        files[genome] = genome + '.axt'
     with open(maf) as infile:
-        inBlock = False
-        allBlocks = []
-        current = []
+        newBlock = True
         for line in infile:
             line = line.rstrip()
-            if line and line[0] == 'a' and not inBlock:
-                current.append(line)
-                inBlock = True
-            elif not line and inBlock:
-                inBlock = False
-                pos = current[1].split()
-                a = int(pos[2])
-                b = a + int(pos[3])
-                if a <= start < b < end:
-                    allBlocks.append(current)
-                elif start <= a < b < end:
-                    allBlocks.append(current)
-                elif start <= a < end <= b or a <= start < end <= b:
-                    allBlocks.append(current)
-                    break
-                current = []
-            elif inBlock:
-                current.append(line)
-    for i in range(len(allBlocks)):
-        temp = []
-        for line in allBlocks[i]:
-            if line[0] != '#' and line[0] != 'a':
-                temp.append(line.split())
-        allBlocks[i] = temp
-
-    startOffset = start - int(allBlocks[0][0][2])
-    endOffset = end - (int(allBlocks[len(allBlocks) - 1][0][3]) + int(allBlocks[len(allBlocks) - 1][0][2]))
-    if len(allBlocks) != 1:
-        first = allBlocks[0]
-        last = allBlocks[len(allBlocks)-1]
-        for i in range(len(first)):
-            allBlocks[0][i][6] = first[i][6][startOffset:] # Cutting off alignment to our query range
-            allBlocks[0][i][2] = int(allBlocks[0][i][2]) + startOffset # adjust start position of alignment in fasta
-        for i in range(len(last)):
-            if endOffset == 0:
-                allBlocks[len(allBlocks) - 1][i][6] = last[i][6]
+            if line:
+                if newBlock and line[0] == 's':
+                    currentRef = line.split()
+                    refSpecies = currentRef[1].split('.')
+                    newBlock = False
+                elif line[0] == 's' and not newBlock:
+                    target = line.split()
+                    species = target[1].split('.')
+                    if species[0][0:3] != 'Anc':
+                        with open(files.get(species[0]), 'a') as out:
+                            header = '0 ' + '.'.join(refSpecies[1:]) + ' ' + currentRef[2] + ' ' + str(int(currentRef[2]) + int(currentRef[3])) + ' '
+                            header += '.'.join(species[1:]) + ' ' + target[2] + ' ' + str(int(target[2]) + int(target[3])) + ' ' + target[4] + ' ' + '1000\n'
+                            out.write(header + currentRef[6] + '\n' + target[6] + '\n\n')
             else:
-                allBlocks[len(allBlocks)-1][i][6] = last[i][6][:endOffset]
-            allBlocks[0][i][3] = int(allBlocks[0][i][3]) - abs(endOffset) # adjust length of alignment
-    else:
-        block = allBlocks[0]
-        for i in range(len(block)):
-            if endOffset == 0:
-                allBlocks[0][i][6] = block[i][6][startOffset:]
-            else:
-                allBlocks[0][i][6] = block[i][6][startOffset:endOffset]
-            allBlocks[0][i][2] = int(allBlocks[0][i][2]) + startOffset
-            allBlocks[0][i][3] = int(allBlocks[0][i][3]) - abs(endOffset)
-    return allBlocks
+                newBlock = True
+    return files, refSpecies[0]
 
 
 def parseArgs():
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('-p',help='region of interest, e.g. 400-500')
     parser.add_argument('-m',help='maf file')
-    parser.add_argument('-r',help='reference genome as written in maf file')
     parser.add_argument('-t',help='target genomes as written in maf file and their corresponding references')
     return parser.parse_args()
 
@@ -141,17 +131,9 @@ def main():
         for line in infile:
             attr = line.rstrip().split()
             ref[attr[0]] = attr[1]
-    blocks = parseMaf(opts.m, opts.p)
-    dictBlock = []
-    for block in blocks:
-        map = {}
-        for line in block:
-            print line
-            map[line[1].split('.')[0]] = (line[2],line[3],line[4],line[6])
-        dictBlock.append(map)
-    #print(dictBlock)
-    pairwise(opts.r,dictBlock,ref,opts.p)
-
+    axt, refSpecies = maf2axt(opts.m, ref)
+    axtChain(axt, ref, refSpecies)
+    psl2cigar(axt)
 
 
 if __name__ == '__main__':

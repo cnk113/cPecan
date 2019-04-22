@@ -1,48 +1,44 @@
-#!/usr/bin/env python3
 # Chang Kim
-
-'''
-Pulls overlapping MAF blocks from alignments
-Trains the pair HMM on the alignment block and surrounding sequence
-'''
 
 import argparse
 import os
 from sonLib.bioio import popenCatch, cigarReadFromString, system
 
 
-def pairwise(ref,blocks,targets,ran):
+def realign(fasta, ref):
     '''
-    :return:
+    :param fasta: genome fasta files
+    :param ref: reference species
     '''
-    cigars = []
-    for block in blocks:
-        seq1 = block.get(ref)
-        seqFile1 = targets.get(ref)
-        for species in block:
-            if species != ref:
-                seq2 = block.get(species)
-                if seq2[2] == '-':
-                    continue
+    seqFile1 = fasta.get(ref)
+    for genome in fasta:
+        if genome == ref:
+            continue
+        axt = genome + '.chained.axt'
+        with open(axt) as infile:
+            block = []
+            for line in infile:
+                if line:
+                    col = line.rstrip().split()
+                    block.append(col)
+                    if len(block) == 3:
+                        cig = axtToCigar(block)
+                        seqFile2 = fasta.get(genome)
+                        realignCommand = "echo '%s' | cPecanRealign %s %s %s" % (cig, "-u /dev/stdout", seqFile1, seqFile2)
+                        print popenCatch(realignCommand).split("\n")
+                else:
+                    block = []
 
 
-                seqFile2 = targets.get(species)
-                cig = cigar(seq1,seq2)
-                #realignCommand = "echo '%s' | /mnt/c/Users/Chang/Desktop/allcode/sonLib/bin/cPecanRealign %s %s %s" % (cig, "-u /dev/stdout", seqFile1, seqFile2)
-
-                print popenCatch(realignCommand).split("\n")
-                #for realignLineByPosteriorProb in [i for i in popenCatch(realignCommand).split("\n") if i != '']:
-                    #line = cigarReadFromString(realignLineByPosteriorProb)
-                    #print(line)
-    return cigars
-
-'''
-def cigar(seq1, seq2):
-    print seq1
-    print seq2
-    cigar = 'cigar: ' + seq1[4] +' '+ str(seq1[0]) + ' ' + str(seq1[1]) + ' ' + seq1[2] + ' ' +seq2[4]+ ' ' + str(seq2[0]) + ' ' + str(seq2[1]) + ' ' + seq2[2] + ' 0 '
-    seq1 = seq1[3].upper()
-    seq2 = seq2[3].upper()
+def axtToCigar(block):
+    '''
+    :param block: axt alignment block
+    :return: cigar string
+    '''
+    header = block[0]
+    cigar = 'cigar: ' + header[1] + ' ' + header[2] + ' ' + header[3] + ' + ' + header[4] + ' ' + header[5] + ' ' + header[6] + ' ' + header[7] + ' 0 '
+    seq1 = block[1][0].upper()
+    seq2 = block[2][0].upper()
     full = ''
     for i in range(len(seq1)):
         if seq1[i] != '-' and '-' != seq2[i]:
@@ -60,42 +56,35 @@ def cigar(seq1, seq2):
             count = 1
     cigar += full[len(seq1)-1] + ' ' + str(count)
     return cigar
-'''
-def psl2cigar(files):
-    '''
-    '''
-    cigars = {}
-    for psl in files:
-        with open(psl) as infile:
-            for line in psl:
-                attr = line.rstrip().split()
-                
-    return cigars
 
 
-def axtChain(axt, fasta, ref):
+def chain(axt, fasta, ref):
     '''
-    :param axt:
-    :param fasta:
-    :param ref:
+    :param axt: axt files
+    :param fasta: genome reference files
+    :param ref: reference species
     '''
+    system('faToTwoBit ' + fasta.get(ref) + ' ' + aln + '.2bit')
     for aln in axt:
-        cmd = 'axtChain -linearGap=medium ' + axt.get(aln) + ' -faQ ' + fasta.get(ref) + ' -faT ' + fasta.get(aln) + aln + '.chain'
-        print cmd
-        system(cmd)
-    for aln in axt:
-        cmd = 'chain2psl ' + aln + '.chain'
-        
+        system('axtChain -linearGap=medium ' + axt.get(aln) + ' -faQ ' + fasta.get(ref) + ' -faT ' + fasta.get(aln) + ' ' + aln + '.chain')
+        system('faToTwoBit ' + fasta.get(aln) + ' ' + aln + '.2bit')
+        system('chainToAxt ' + aln + '.chain ' + aln + '.2bit ' + ref + '.2bit ' + aln + '.chained.axt'
 
-def maf2axt(maf, genomes):
+
+def mafToAxt(maf, genomes):
     '''
     :param maf: maf file
     :param genomes: genomes to align
     '''
-    files = {}
+    files = []
+    idx = {}
+    filedir = {}
     for genome in genomes:
-        files[genome] = genome + '.axt'
+        files.append(genome + '.axt')
+        filedir[genome] = genome + '.axt'
+        idx[genome] = 0
     with open(maf) as infile:
+        filedata = {filename: open(filename,'w+') for filename in files}
         newBlock = True
         for line in infile:
             line = line.rstrip()
@@ -107,14 +96,16 @@ def maf2axt(maf, genomes):
                 elif line[0] == 's' and not newBlock:
                     target = line.split()
                     species = target[1].split('.')
-                    if species[0][0:3] != 'Anc':
-                        with open(files.get(species[0]), 'a') as out:
-                            header = '0 ' + '.'.join(refSpecies[1:]) + ' ' + currentRef[2] + ' ' + str(int(currentRef[2]) + int(currentRef[3])) + ' '
-                            header += '.'.join(species[1:]) + ' ' + target[2] + ' ' + str(int(target[2]) + int(target[3])) + ' ' + target[4] + ' ' + '1000\n'
-                            out.write(header + currentRef[6] + '\n' + target[6] + '\n\n')
+                    if filedir.get(species[0]) != None:
+                        header = str(idx.get(species[0])) + ' ' + '.'.join(refSpecies[1:]) + ' ' + currentRef[2] + ' ' + str(int(currentRef[2]) + int(currentRef[3])) + ' '
+                        header += '.'.join(species[1:]) + ' ' + target[2] + ' ' + str(int(target[2]) + int(target[3])) + ' ' + target[4] + ' ' + '1000\n'
+                        filedata.get(filedir.get(species[0])).write(header + currentRef[6] + '\n' + target[6] + '\n\n')
+                        idx[species[0]] += 1
             else:
                 newBlock = True
-    return files, refSpecies[0]
+        for f in filedata.values():
+            f.close()
+    return filedir, refSpecies[0]
 
 
 def parseArgs():
@@ -131,9 +122,9 @@ def main():
         for line in infile:
             attr = line.rstrip().split()
             ref[attr[0]] = attr[1]
-    axt, refSpecies = maf2axt(opts.m, ref)
-    axtChain(axt, ref, refSpecies)
-    psl2cigar(axt)
+    axt, refSpecies = mafToAxt(opts.m, ref)
+    chain(axt, ref, refSpecies)
+    realign(ref, refSpecies)
 
 
 if __name__ == '__main__':
